@@ -14,10 +14,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-
 HelloVK::HelloVK()
 : vertices  {
     {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -37,6 +33,9 @@ void HelloVK::initVulkan() {
     createSwapChainImageViews();
     createRenderPass();
     createDescriptorSetLayout();
+    createUniformBuffers();
+    createDescriptorPool();
+    createDescriptorSets();
     createGraphicsPipeline();
     createFramebuffers();
 
@@ -45,10 +44,6 @@ void HelloVK::initVulkan() {
 
     createVertexBuffer();
     mapVertexBuffer();
-
-    createUniformBuffers();
-    createDescriptorPool();
-    createDescriptorSets();
     createSyncObjects();
     initialized = true;
 }
@@ -116,7 +111,7 @@ void HelloVK::createUniformBuffers()
 void HelloVK::createDescriptorSetLayout()
 {
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
-    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.binding = 0;////////!!!!!!!
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -168,15 +163,22 @@ void HelloVK::render()
         onOrientationChange();
     }
 
-    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE,
-                    UINT64_MAX);
+    vkWaitForFences(device, 1, &inFlightFences[currentFrame], VK_TRUE,UINT64_MAX);
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(
-            device, swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame],
-            VK_NULL_HANDLE, &imageIndex);
+            device,
+            swapChain,
+            UINT64_MAX,
+            imageAvailableSemaphores[currentFrame],
+            VK_NULL_HANDLE,
+            &imageIndex
+            );
+
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        recreateSwapChain();////////////////////check android sleep/lock/
+        //The swap chain has become incompatible with the surface and can no longer be used
+        // for rendering. Usually happens after a window resize.
+        recreateSwapChain();
         return;
     }
     assert(result == VK_SUCCESS ||
@@ -245,23 +247,23 @@ void getPrerotationMatrix(const VkSurfaceCapabilitiesKHR &capabilities,
 
     // scale by screen ratio
     mat = glm::scale(mat, glm::vec3(1.0f, ratio, 1.0f));
-
     // rotate 1 degree every function call.
     static float currentAngleDegrees = 0.0f;
     currentAngleDegrees += 1.0f;
     mat = glm::rotate(mat, glm::radians(currentAngleDegrees), glm::vec3(0.0f, 0.0f, 1.0f));
+    mat = glm::translate(mat, glm::vec3(0.3,0.4,.1));
 }
 
 void HelloVK::createDescriptorPool() {
-    VkDescriptorPoolSize poolSizes[2];
+    VkDescriptorPoolSize poolSizes[1];
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+//    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+//    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 2;
+    poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = poolSizes;
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT) * 2;
 
@@ -291,7 +293,7 @@ void HelloVK::createDescriptorSets() {
         // Uniform buffer
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = descriptorSets[i];
-        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstBinding = 0; //////?????
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[0].descriptorCount = 1;
@@ -339,13 +341,6 @@ void HelloVK::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageI
 
     VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = renderPass;
-    renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapChainExtent;
-
     VkViewport viewport{};
     viewport.width = (float)swapChainExtent.width;
     viewport.height = (float)swapChainExtent.height;
@@ -359,6 +354,12 @@ void HelloVK::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageI
 
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
 
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = swapChainExtent;
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo,//////////////////!!!!!!
@@ -428,7 +429,7 @@ void HelloVK::cleanup() {
 
 void HelloVK::setupDebugMessenger()
 {
-    if (false && enableValidationLayers)
+    if (enableValidationLayers)
     {
         VkDebugUtilsMessengerCreateInfoEXT createInfo{};
         populateDebugMessengerCreateInfo(createInfo);
@@ -703,7 +704,7 @@ void HelloVK::createSwapChain()
             [](const std::vector<VkSurfaceFormatKHR> &availableFormats) {
                 for (const auto &availableFormat : availableFormats) {
                     if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
-                        availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                        availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {//todo
                         return availableFormat;
                     }
                 }
@@ -793,7 +794,7 @@ void HelloVK::createSwapChainImageViews() {
     }
 }
 
-void HelloVK::createRenderPass() {
+void HelloVK::createRenderPass() {//!!!!!!!!!!!!!!!!!!!!!!
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = swapChainImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -900,7 +901,14 @@ void HelloVK::createGraphicsPipeline() {
     inputAssembly.sType =
             VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    //Normally, the vertices are loaded from the vertex buffer by index in sequential order,
+    // but with an element buffer you can specify the indices to use yourself.
+    // This allows you to perform optimizations like reusing vertices.
+    // If you set the primitiveRestartEnable member to VK_TRUE, then
+    // it's possible to break up lines and triangles in the _STRIP topology modes
+    // by using a special index of 0xFFFF or 0xFFFFFFFF.
+    inputAssembly.primitiveRestartEnable = VK_FALSE;//
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -909,7 +917,7 @@ void HelloVK::createGraphicsPipeline() {
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.depthClampEnable = VK_TRUE;//???
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
