@@ -33,8 +33,10 @@ add_definitions(-DVK_USE_PLATFORM_ANDROID_KHR=1)
 
 add_library(${PROJECT_NAME} SHARED
         main.cpp
-        learn_vulkan.cpp
-        tools.cpp)
+        HelloVK.cpp
+        Tools.cpp
+        Random.cpp
+        Vertex.cpp)
 
 # Import the CMakeLists.txt for the glm library
 add_subdirectory(${THIRD_PARTY_DIR}/glm ${CMAKE_CURRENT_BINARY_DIR}/glm)

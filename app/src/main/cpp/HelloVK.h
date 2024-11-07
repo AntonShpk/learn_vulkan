@@ -1,7 +1,8 @@
 #pragma once
 
-#include "tools.h"
+#include "Tools.h"
 #include "Vertex.h"
+#include "Random.h"
 
 #include <vulkan/vulkan.h>
 
@@ -116,4 +117,5 @@ private:
     std::vector<Vertex> vertices;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    std::unique_ptr<Tools::Random> randomizer;
 };

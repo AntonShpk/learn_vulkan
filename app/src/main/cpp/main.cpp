@@ -1,5 +1,5 @@
-#include "learn_vulkan.h"
-#include "tools.h"
+#include "HelloVK.h"
+#include "Tools.h"
 
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <cstdlib>

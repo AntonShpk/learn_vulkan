@@ -1,10 +1,11 @@
-#include "tools.h"
+#include "Tools.h"
+#include "Vertex.h"
 
 #include <android/asset_manager.h>
 #include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-#include <assert.h>
+#include <cassert>
 
 
 #include <fstream>

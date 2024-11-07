@@ -1,5 +1,5 @@
-#include "learn_vulkan.h"
-#include "tools.h"
+#include "HelloVK.h"
+#include "Tools.h"
 #include "Vertex.h"
 
 #include <array>
@@ -15,12 +15,20 @@
 
 
 HelloVK::HelloVK()
-: vertices  {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    : vertices  {10000}
+    , randomizer{std::make_unique<Tools::Random>()}
+{
+
+    std::uniform_real_distribution<float> dist {-1., 1.};
+    std::function<Vertex()> f = [&](){
+        return Vertex
+                (
+                        glm::vec2{dist(randomizer->GetEngine()), dist(randomizer->GetEngine())}
+                        ,glm::vec3{dist(randomizer->GetEngine()), dist(randomizer->GetEngine()), dist(randomizer->GetEngine())}
+                );
+    };
+    randomizer->Fill(vertices, f);
 }
-{}
 
 void HelloVK::initVulkan() {
     createInstance();
@@ -246,20 +254,18 @@ void getPrerotationMatrix(const VkSurfaceCapabilitiesKHR &capabilities,
     mat = glm::mat4(1.0f);
 
     // scale by screen ratio
-    mat = glm::scale(mat, glm::vec3(1.0f, ratio, 1.0f));
+    //mat = glm::scale(mat, glm::vec3(1.0f, ratio, 1.0f));
     // rotate 1 degree every function call.
     static float currentAngleDegrees = 0.0f;
     currentAngleDegrees += 1.0f;
     mat = glm::rotate(mat, glm::radians(currentAngleDegrees), glm::vec3(0.0f, 0.0f, 1.0f));
-    mat = glm::translate(mat, glm::vec3(0.3,0.4,.1));
+//    mat = glm::translate(mat, glm::vec3(0.3,0.4,.1));
 }
 
 void HelloVK::createDescriptorPool() {
     VkDescriptorPoolSize poolSizes[1];
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
-//    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-//    poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -381,12 +387,12 @@ void HelloVK::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageI
 }
 
 void HelloVK::cleanupSwapChain() {
-    for (size_t i = 0; i < swapChainFramebuffers.size(); ++i) {
-        vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+    for (VkFramebuffer& swapChainBuffer : swapChainFramebuffers) {
+        vkDestroyFramebuffer(device, swapChainBuffer, nullptr);
     }
 
-    for (size_t i = 0; i < swapChainImageViews.size(); ++i) {
-        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+    for (VkImageView& swapChainImageView : swapChainImageViews) {
+        vkDestroyImageView(device, swapChainImageView, nullptr);
     }
 
     vkDestroySwapchainKHR(device, swapChain, nullptr);
